@@ -5,19 +5,27 @@
  */
 
 function Middleware() {
-
 };
 
+
 Middleware.prototype.use = function (fn) {
+
     var self = this;
 
     this.go = (function (stack) {
         return function (next) {
             stack.call(self, function () {
-                fn.call(self, next.bind(self));
+
+                const args = self.args;
+                args.push(next.bind(self));
+
+                fn.apply(self, args);
+                args.pop();
+
             });
         }.bind(this);
     })(this.go);
+
 };
 
 Middleware.prototype.go = function (next) {
@@ -25,30 +33,74 @@ Middleware.prototype.go = function (next) {
 };
 
 
+Middleware.prototype.start = function () {
+
+    const self = this;
+
+    const args = Array.prototype.slice.call(arguments);
+    const final = args.pop();
+    this.args = args;
+
+
+    this.go(function () {
+        final.apply(self, self.args);
+    });
+
+};
+
 
 /*
 const m = new Middleware();
 
-m.use(function (next) {
+m.use(function (obj, next) {
     setTimeout(function () {
 
-        console.log("use - 1");
+        console.log("use - 1", obj);
+        obj.hello = "node";
+
         next();
 
     }, 1000);
 });
 
-m.use(function (next) {
+
+m.use(function (obj, next) {
     setTimeout(function () {
 
-        console.log("use - 2");
+        console.log("use - 2", obj);
+        obj.string = "Hello World";
         next();
 
     }, 1000);
 });
 
-m.go(function () {
-    console.log("Finla call");
-});*/
+m.use(function (obj, next) {
+    setTimeout(function () {
+
+        console.log("use - 3", obj);
+        obj.arr = Array;
+        next();
+
+    }, 1000);
+});
+
+
+m.use(function (obj, next) {
+    setTimeout(function () {
+
+        console.log("use - 4", obj);
+        delete obj.string;
+        next();
+
+    }, 1000);
+});
+
+
+m.start({ hello: "world" }, function (obj) {
+
+    console.log("Finla call", obj);
+
+});
+*/
 
 module.exports = Middleware;
