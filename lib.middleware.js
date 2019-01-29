@@ -1,32 +1,37 @@
-// https://gist.github.com/darrenscerri/5c3b3dcbe4d370435cfa
-
-/**
- * @TODO function arguments
- */
+// @FIXME RangeError: Maximum call stack size exceeded
+// weil kein timeout zwischne calls, args.pop not working -> recursiv call
+// see /examples/example-1.js for workaround (setTimeout)
+// @TODO improve args handling
 
 function Middleware() {
+    this.args = [];
 };
 
 
 Middleware.prototype.use = function (fn) {
 
+
     var self = this;
 
     this.go = (function (stack) {
         return function (next) {
+
             stack.call(self, function () {
 
                 const args = self.args;
                 args.push(next.bind(self));
 
+
                 fn.apply(self, args);
-                args.pop();
+                args.pop(); // --> ohne delay stack overflow, da zu langsam!?! -> !
 
             });
+
         }.bind(this);
     })(this.go);
 
 };
+
 
 Middleware.prototype.go = function (next) {
     next();
@@ -48,59 +53,5 @@ Middleware.prototype.start = function () {
 
 };
 
-
-/*
-const m = new Middleware();
-
-m.use(function (obj, next) {
-    setTimeout(function () {
-
-        console.log("use - 1", obj);
-        obj.hello = "node";
-
-        next();
-
-    }, 1000);
-});
-
-
-m.use(function (obj, next) {
-    setTimeout(function () {
-
-        console.log("use - 2", obj);
-        obj.string = "Hello World";
-        next();
-
-    }, 1000);
-});
-
-m.use(function (obj, next) {
-    setTimeout(function () {
-
-        console.log("use - 3", obj);
-        obj.arr = Array;
-        next();
-
-    }, 1000);
-});
-
-
-m.use(function (obj, next) {
-    setTimeout(function () {
-
-        console.log("use - 4", obj);
-        delete obj.string;
-        next();
-
-    }, 1000);
-});
-
-
-m.start({ hello: "world" }, function (obj) {
-
-    console.log("Finla call", obj);
-
-});
-*/
 
 module.exports = Middleware;

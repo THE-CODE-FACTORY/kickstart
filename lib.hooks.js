@@ -1,40 +1,62 @@
 const Middleware = require("./lib.middleware.js");
 
-/**
- * @TODO function arguments
- * @param {} obj 
- * @param {*} method 
- */
+// @TODO fix in lib.middleware.js args handling
+// @TODO improve argument handling (like middleware)
 
-function Hooks(obj, name) {
+
+function Hooks(obj, method) {
 
     const self = this;
-    this._fnc = obj[name];
+
+    this._fnc = obj[method];
     this._pre = new Middleware();
     this._post = new Middleware();
-    this._obj = obj;
+
+    // 1) original method calles
+    // 2) pre hook stack execute
+    // 3) method is called from us
+    // 4) callback from original called
+    // 5) execute post stack
+    // 6) run callback
+
+    obj[method] = function () {
+
+        const args = Array.prototype.slice.call(arguments);
+        const done = args.pop();
+
+        args.push(function () {
+
+            const args = Array.prototype.slice.call(arguments);
+            args.push(function () {
 
 
+                const args = Array.prototype.slice.call(arguments);
+                args.push(function () {
 
-    this._obj[name] = function () {
-        self._pre.go(function () {
-
-            self._fnc(function () {
-                self._post.go(function () {
-
-                    // needed?!
-                    // i dont think so...
-                    //console.log("last post hook");
+                    const args = Array.prototype.slice.call(arguments);
+                    done.apply(lib, args);
 
                 });
+
+                self._post.start.apply(self._post, args)
+                args.pop();
+
+
             });
 
+            self._fnc.apply(lib, args);
+            args.pop();
+
         });
+
+
+        // execute pre stack
+        self._pre.start.apply(self._pre, args);
+        args.pop();
+
     };
 
 }
-
-
 
 
 Hooks.prototype.pre = function (cb) {
@@ -46,47 +68,54 @@ Hooks.prototype.post = function (cb) {
 };
 
 
-module.exports = Hooks;
 
 
+//////////////////////////
+/*
 const lib = {
-    method: function (cb) {
-        console.log("Method in lib");
-        cb();
+    "super": function (dat, cb) {
+
+        console.log("in lib.super()", dat);
+        setTimeout(function () {
+
+            console.log("in lib.super, call cb");
+            cb(null, { data: false, query: "* FROM users WHERE ID=..." });
+
+        }, 1000);
+
     }
 };
 
+const hook = new Hooks(lib, "super");
 
-const i = new Hooks(lib, "method");
-
-i.pre(function (next) {
-
-    console.log("pre");
-    next();
-
+hook.pre(function (obj, next) {
+    console.log("pre, 1", obj);
+    obj.file = "/path/nope......";
+    setTimeout(next, 1000);
 });
 
-i.pre(function (next) {
-
-    console.log("pre");
-    next();
-
+hook.pre(function (obj, next) {
+    console.log("pre, 2", obj);
+    setTimeout(next, 1000);
 });
 
-i.post(function (next) {
-
-    console.log("post");
-    next();
-
+hook.post(function (err, result, next) {
+    result.data = true;
+    console.log("post, 1");
+    setTimeout(next, 1000);
 });
 
-i.post(function (next) {
-
-    console.log("post");
-    next();
-
+hook.post(function (err, result, next) {
+    console.log("post, 2");
+    setTimeout(next, 1000);
 });
 
-lib.method(function () {
-    console.log("method in lib");
-});
+
+
+lib.super({
+    file: "/temp/file/folder/dat.inc"
+}, function (err, result) {
+
+    console.log("final call", err, result)
+
+});*/
