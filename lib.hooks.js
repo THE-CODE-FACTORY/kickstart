@@ -21,38 +21,57 @@ function Hooks(obj, method) {
 
     obj[method] = function () {
 
-        const args = Array.prototype.slice.call(arguments);
+        // get arguments passed to lib.method(...args)
+        // pop callback function from arguments
+        var args = Array.prototype.slice.call(arguments);
         const done = args.pop();
 
-        args.push(function () {
-
-            const args = Array.prototype.slice.call(arguments);
-            args.push(function () {
+        const pre = self._pre.start;
+        const post = self._post.start;
 
 
-                const args = Array.prototype.slice.call(arguments);
-                args.push(function () {
+        // does not work beacuse args = const
+        args = [].concat(args, [function () {
+
+
+            // get arguments passed to 
+            // @NOTE, needed?!
+            // args = original args (scope drüber)
+            var args = Array.prototype.slice.call(arguments);
+
+
+            // create args array to apply
+            // with custom callback as last argument
+            args = [].concat(args, [function () {
+
+
+                var args = Array.prototype.slice.call(arguments);
+                args = [].concat(args, [function () {
 
                     const args = Array.prototype.slice.call(arguments);
-                    done.apply(lib, args);
+                    done.apply(obj, args);
 
-                });
-
-                self._post.start.apply(self._post, args)
-                args.pop();
+                }]);
 
 
-            });
+                // execute post stack
+                // after original function has called
+                post.apply(self._post, args);
 
-            self._fnc.apply(lib, args);
-            args.pop();
 
-        });
+            }]);
+
+
+            // execute original function
+            // with (or without) modified arguments from pre stack
+            self._fnc.apply(obj, args);
+
+
+        }]);
 
 
         // execute pre stack
-        self._pre.start.apply(self._pre, args);
-        args.pop();
+        pre.apply(self._pre, args);
 
     };
 
@@ -67,55 +86,4 @@ Hooks.prototype.post = function (cb) {
     this._post.use(cb);
 };
 
-
-
-
-//////////////////////////
-/*
-const lib = {
-    "super": function (dat, cb) {
-
-        console.log("in lib.super()", dat);
-        setTimeout(function () {
-
-            console.log("in lib.super, call cb");
-            cb(null, { data: false, query: "* FROM users WHERE ID=..." });
-
-        }, 1000);
-
-    }
-};
-
-const hook = new Hooks(lib, "super");
-
-hook.pre(function (obj, next) {
-    console.log("pre, 1", obj);
-    obj.file = "/path/nope......";
-    setTimeout(next, 1000);
-});
-
-hook.pre(function (obj, next) {
-    console.log("pre, 2", obj);
-    setTimeout(next, 1000);
-});
-
-hook.post(function (err, result, next) {
-    result.data = true;
-    console.log("post, 1");
-    setTimeout(next, 1000);
-});
-
-hook.post(function (err, result, next) {
-    console.log("post, 2");
-    setTimeout(next, 1000);
-});
-
-
-
-lib.super({
-    file: "/temp/file/folder/dat.inc"
-}, function (err, result) {
-
-    console.log("final call", err, result)
-
-});*/
+module.exports = Hooks;
