@@ -6,12 +6,12 @@ middleware.use(function (obj, next) {
 
     console.log("middleware - 1", obj);
 
-    setTimeout(function () {
+    //setTimeout(function () {
 
-        obj.hook1 = true;
-        next();
+    obj.hook1 = true;
+    next();
 
-    });
+    //});
 
 });
 
@@ -20,12 +20,12 @@ middleware.use(function (obj, next) {
 
     console.log("middleware - 2", obj);
 
-    setTimeout(function () {
+    //setTimeout(function () {
 
-        obj.hook2 = true;
-        next();
+    obj.hook2 = true;
+    next();
 
-    });
+    //});
 
 });
 
@@ -34,12 +34,12 @@ middleware.use(function (obj, next) {
 
     console.log("middleware - 3", obj);
 
-    setTimeout(function () {
+    //setTimeout(function () {
 
-        obj.hook3 = { badum: "tss" };
-        next();
+    obj.hook3 = { badum: "tss" };
+    next();
 
-    });
+    //});
 
 });
 
@@ -48,12 +48,12 @@ middleware.use(function (obj, next) {
 
     console.log("middleware - 4", obj);
 
-    setTimeout(function () {
+    //setTimeout(function () {
 
-        delete obj.hook3;
-        next();
+    //delete obj.hook3;
+    next();
 
-    });
+    //});
 
 });
 

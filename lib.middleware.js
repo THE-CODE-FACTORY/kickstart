@@ -19,11 +19,12 @@ Middleware.prototype.use = function (fn) {
             stack.call(self, function () {
 
                 const args = self.args;
-                args.push(next.bind(self));
+                //args.push(next.bind(self));
 
 
-                fn.apply(self, args);
-                args.pop(); // --> ohne delay stack overflow, da zu langsam!?! -> !
+                fn.apply(self, [].concat(args, [next.bind(self)]));
+                //fn.apply(self, args);
+                //args.pop(); // --> ohne delay stack overflow, da zu langsam!?! -> !
 
             });
 
