@@ -48,7 +48,7 @@ function Hooks(obj, method) {
                 var args = Array.prototype.slice.call(arguments);
                 args = [].concat(args, [function () {
 
-                    const args = Array.prototype.slice.call(arguments);
+                    var args = Array.prototype.slice.call(arguments);
                     done.apply(obj, args);
 
                 }]);

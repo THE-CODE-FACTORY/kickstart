@@ -2,7 +2,7 @@ const child = require("child_process");
 const path = require("path");
 
 function Services() {
-    this.folder = "";
+    this.folder = "./services";
     this.childs = {};
 };
 
@@ -26,11 +26,11 @@ Services.prototype.startup = function (name) {
         // process.argv[2]; = service name
 
         const location = path.resolve(this.folder, `service.${name}.js`);
-        const process = this.childs[name] = child.fork(location, [name]);
+        const forked = this.childs[name] = child.fork(location, [name]);
 
 
-        process.on("exit", function (code) {
-            if (process.killed) {
+        forked.on("exit", function (code) {
+            if (forked.killed) {
 
                 // shutdown called on process
                 // assume we want that the process should exit

@@ -6,12 +6,12 @@ const lib = {
     "super": function (dat, cb) {
 
         console.log("in lib.super()", dat);
-        setTimeout(function () {
+        //setTimeout(function () {
 
-            console.log("in lib.super, call cb");
-            cb(null, { data: false, query: "* FROM users WHERE ID=..." });
+        console.log("in lib.super, call cb");
+        cb(null, { data: false, query: "* FROM users WHERE ID=..." });
 
-        }, 1000);
+        //}, 1000);
 
     }
 };

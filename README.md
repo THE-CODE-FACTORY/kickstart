@@ -1,4 +1,4 @@
-# bootstrap
+# kickstart
 #### Small Node.js helper librarie for applications
 
 
