@@ -1,260 +1,163 @@
-const EventEmitter = require("events");
-
 /*
 // https://eggjs.org/en/core/cluster-and-ipc.html
 // https://nodejs.org/dist/latest-v10.x/docs/api/events.html#events_emitter_removelistener_eventname_listener
 */
 
 function Events() {
-    this.childs = [];
-    this.emitter = new EventEmitter();
-}
 
+    var childs = [];
+    const self = this;
+    this._events = {};
 
-Events.prototype.emit = function () {
-
-    // convert <arguments> to array
-    const args = Array.prototype.slice.call(arguments);
-    const last = args.pop();
-    var ack = null;
-
-    if (last instanceof Function) {
-
-        // timestamp
-        ack = "ackCb-" + Date.now();
-
-        if (process.send) {
-
-            process.on("message", (data) => {
-                if (data.ack === ack) {
-
-                    last.apply(data, data.args);
-
-                }
-            });
-
-        } else if (this.childs.length > 0) {
-
-
-            this.childs.forEach(function (child) {
-                if (child.channel && child.connected) {
-
-                    child.on("message", (data) => {
-                        if (data.ack === ack) {
-
-                            // call cb with args
-                            last.apply(data, data.args)
-
-                        }
-                    });
-
-                }
-            }, this);
-
-        } else {
-
-            this.emitter.on(ack, function (data) {
-                last.apply(data, data.args);
-            });
-
-        }
-    }
-
-    const data = {
+    this._template = {
         origin: process.pid,
-        event: args.shift(),
-        args: args,
-        ack
+        event: null,
+        args: null,
+        ack: null
     };
 
 
-    if (process.send) {
+    Object.defineProperty(this, "childs", {
+        get: function () {
+            return childs;
+        },
+        set: function (arr) {
 
-        // we are child
-        // send to master        
-        process.send(data);
+            childs = arr;
 
-    } else if (this.childs > 0) {
+            childs.forEach((child) => {
+                child.on("message", (data) => {
 
-        // me are master
-        // send to child
 
-        this.childs.forEach(function (child) {
-            if (child.channel && child.connected) {
+                    // process local
+                    if (self._events[data.event]) {
+                        self._events[data.event].forEach((fnc) => {
 
-                // send to workers
-                // (we are master)
-                child.send(data);
+                            fnc.apply(data, data.args);
 
-            }
+                        }, self);
+                    }
+
+
+                    // "hub" role
+                    // broadcast to other childs
+                    childs.forEach((sub) => {
+                        if (sub.pid !== data.origin) {
+
+                            sub.send(data);
+
+                        }
+                    });
+
+
+                });
+            });
+
+        }
+    });
+
+
+    // we are: child
+    // wait for messages from master
+    process.on("message", (data) => {
+        if (self._events[data.event]) {
+
+            self._events[data.event].forEach((fnc) => {
+                fnc.apply(data, data.args);
+            }, self);
+
+        }
+    });
+
+}
+
+
+Events.prototype.emit = function emit() {
+
+    const args = Array.prototype.slice.call(arguments);
+    const event = args.shift();
+
+    const data = Object.assign({}, this._template, {
+        args: args,
+        event: event
+    });
+
+
+    // we are: local
+    // process local
+    if (this._events[event]) {
+        this._events[event].forEach((fnc) => {
+            fnc.apply(data, args);
         }, this);
-
-    } else {
-
-        // process local
-        // send to our self
-
-        this.emitter.emit.call(this.emitter, data.event, data);
-
     }
+
+
+
+    // we are: master
+    // send to child processes
+    this.childs.forEach((child) => {
+        child.send(data)
+    }, this);
+
+
+    // we are: child
+    // send to master (hub)
+    if (process.send) {
+        process.send(data);
+    }
+
 
 };
 
 
-Events.prototype.on = function (event, cb) {
+Events.prototype.on = function on(event, cb) {
+
+    if (!this._events[event]) {
+        this._events[event] = [];
+    }
+
+    this._events[event].push(cb);
+
+};
+
+
+Events.prototype.once = function once(event, cb) {
+
+
+    if (!this._events[event]) {
+        this._events[event] = [];
+    }
 
     const self = this;
+    const wrapper = function wrapper() {
 
-    if (process.send) {
+        const args = Array.prototype.slice.call(arguments);
+        const index = self._events[event].indexOf(wrapper);
 
-        // we are child
-        // listen for messages from master
+        self._events[event].splice(index, 1);
+        cb.apply(this, args);
 
-        process.on("message", (data) => {
-            if (data.event === event) {
+    };
 
-                // HANDLER FOR ACK CALLBACKS
-                (function () {
-                    if (data.ack !== null) {
-                        data.args.push(function () {
+    this._events[event].push(wrapper);
 
-                            console.log("ack called");
-
-                            const args = Array.prototype.slice.call(arguments)
-
-                            // ack function called when done
-                            process.send({
-                                origin: process.pid,
-                                event: data.ack,
-                                args: args,
-                                ack: data.ack
-                            });
-
-                        });
-                    }
-                })();
-
-                // call cb with args
-                cb.apply(data, data.args)
-
-            }
-        });
-
-    } else if (this.childs.lenght > 0) {
-
-        // we are master
-        // listen for messages from child(s)
-
-        this.childs.forEach(function (child) {
-            if (child.channel && child.connected) {
-
-                child.on("message", (data) => {
-                    if (data.event === event) {
-
-                        // HANDLER FOR ACK CALLBACK
-                        (function () {
-                            if (data.ack !== null) {
-                                data.args.push(function () {
-
-                                    const args = Array.prototype.slice.call(arguments)
-
-                                    // ack function called when done
-                                    process.send({
-                                        origin: process.pid,
-                                        event: data.ack,
-                                        data: args,
-                                        ack: data.ack
-                                    });
-
-                                });
-                            }
-                        })();
-
-                        // call cb with args
-                        cb.apply(data, data.args)
-
-                    }
-                });
-
-            }
-        }, this);
-
-    } else {
-
-        this.emitter.on(event, function (data) {
-
-            // HANDLER FOR ACK CALLBACK
-            (function () {
-                if (data.ack !== null) {
-                    data.args.push(function () {
+};
 
 
-                        const args = Array.prototype.slice.call(arguments);
+Events.prototype.removeListener = function removeListener(event, cb) {
+    if (this._events[event]) {
 
-                        // ack function called when done
-
-                        const ack = {
-                            origin: process.pid,
-                            event: data.ack,
-                            args: args,
-                            ack: data.ack
-                        }
-
-                        self.emitter.emit.call(self.emitter, ack.ack, ack);
-
-                    });
-                }
-            })();
-
-            cb.apply(data, data.args);
-
-        });
+        const index = this._events[event].indexOf(cb);
+        this._events[event].splice(index, 1);
 
     }
 };
 
 
-Events.prototype.once = function (event, cb) {
-    if (process.send) {
-
-        // we are child
-        // listen for messages from master
-
-        var called = false;
-        process.on("message", function (data) {
-            if (data.event === event && !called) {
-
-                // call cb with args
-                cb.apply(data, data.args);
-                called = true;
-
-            }
-        });
-
-    } else {
-
-        // we are master
-        // listen for messages from child(s)
-
-        var called = false;
-        this.childs.forEach(function (child) {
-            if (child.channel && child.connected) {
-
-                child.on("message", function (data) {
-                    if (data.event === event && !called) {
-
-                        // call cb with args
-                        cb.apply(data, data.args)
-                        called = true;
-
-                    }
-                });
-
-            }
-        }, this);
-
-    }
+Events.prototype.removeAllListeners = function removeAllListeners(event) {
+    this._events[event] = [];
 };
+
 
 
 module.exports = Events;

@@ -43,6 +43,9 @@ Services.prototype.startup = function (name) {
             }
         });
 
+
+        return forked;
+
     }
 };
 
