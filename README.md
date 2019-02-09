@@ -129,4 +129,6 @@ lib.method(function () {
 });
 ```
 
-Licensed under: WTFPL
+See ```examples``` for more documention.
+
+Licensed under: MIT
