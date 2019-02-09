@@ -14,9 +14,9 @@ emitter.on("acknowledge", function (data, cb) {
 });
 
 
-emitter.emit("acknowledge", { super: "data" }, function (data) {
+emitter.emit("acknowledge", { super: "data" }, function () {
 
     // arguments[0] = {super: false}
-    console.log("Confirmed.", data);
+    console.log("Confirmed.", arguments);
 
 });

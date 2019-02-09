@@ -16,12 +16,15 @@ const emitter = new kickstart.Events();
 // "tell" event emitter we ware master
 emitter.childs = Object.values(services.childs);
 
+emitter.on("ACK-EVENT", function (data, cb) {
 
-emitter.once("hello", function (message) {
-    console.log("[MASTER] Service with lowest PID: %d (%s)", this.origin, message);
-});
+    // feedback
+    console.log("ACK-EVENT, from master:", data);
 
+    // modifie data
+    data.dummy = false;
 
-emitter.on("hello", function (message) {
-    console.log("[MASTER] Hello From Service %d (%s)", this.origin, message);
+    // send back
+    cb("seen @ " + Date.now(), data);
+
 });

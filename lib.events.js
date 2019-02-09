@@ -33,6 +33,16 @@ function Events() {
                     if (self._events[data.event]) {
                         self._events[data.event].forEach((fnc) => {
 
+                            if (data.ack) {
+                                data.args.push(function () {
+
+                                    const args = Array.prototype.slice.call(arguments);
+                                    self.emit.apply(self, [data.ack].concat(args));
+
+                                });
+                            }
+
+                            // call event listener
                             fnc.apply(data, data.args);
 
                         }, self);
@@ -76,11 +86,29 @@ Events.prototype.emit = function emit() {
 
     const args = Array.prototype.slice.call(arguments);
     const event = args.shift();
+    const last = args.pop();
 
-    const data = Object.assign({}, this._template, {
+    var data = Object.assign({}, this._template, {
         args: args,
         event: event
     });
+
+
+    if (last instanceof Function) {
+
+        // symbols should be better
+        // serialize to much...
+        // @TODO ACK identifiere
+        data.ack = Date.now();
+        this.on(data.ack, last);
+
+    } else {
+
+        // last argument is no function
+        // push it back to array
+        args.push(last);
+
+    }
 
 
     // we are: local
@@ -90,7 +118,6 @@ Events.prototype.emit = function emit() {
             fnc.apply(data, args);
         }, this);
     }
-
 
 
     // we are: master
@@ -134,11 +161,13 @@ Events.prototype.once = function once(event, cb) {
         const args = Array.prototype.slice.call(arguments);
         const index = self._events[event].indexOf(wrapper);
 
+        // remove after wrapper gets called
         self._events[event].splice(index, 1);
         cb.apply(this, args);
 
     };
 
+    // add event listener
     this._events[event].push(wrapper);
 
 };
