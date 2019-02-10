@@ -15,6 +15,10 @@
   * for any function
   * for any module
 
+### ToDo's
+- API documentation
+- Release v1.0.0 (stable)
+
 
 ### Use case
 Your application running in independet services (processes) and communicate over ipc/network with each other.
@@ -24,13 +28,19 @@ Your application running in independet services (processes) and communicate over
 Split your application in individual services, spin them up with our `lib.services.js` module.
 In each service `require()` our `lib.events.js` and you can simple pass events between all services/processes.
 
-### Example (services)
+
+### Example usage
+----
+(See ```example``` folder for more)
+
+#### Services
 ##### index.js
 ```js
-const {services} = require("kickstart");
+const kickstart = require("kickstart");
+const services = new kickstart.Service();
 
 // where are the services located?
-services.folder = "./services";
+//services.folder = "./services"; // (default)
 
 // fork a service/start them
 services.startup("service-1.js");
@@ -41,24 +51,25 @@ services.startup("service-3.js");
 
 ##### services/service-(1-3).js
 ```js
-const {emitter} = require("kickstart");
+const kickstart = require("kickstart");
+const events = new kickstart.Events();
 
-emitter.on("event-1", function(){
+events.on("event-1", function(){
     console.log("Event - 1, in process:%d", process.pid);
 });
 
 setTimeout(function(){
-    emitter.emit("event-1");
+    events.emit("event-1");
 }, process.pid);
 ```
 
 
-### Example (middleware)
+### Middleware
 ```js
-const {middlware} = require("kickstart");
-const m = new middleware();
+const kickstart = require("kickstart");
+const middleware = new kickstart.Middleware();
 
-m.use(function (next) {
+middleware.use(function (next) {
     setTimeout(function () {
 
         console.log("use - 1");
@@ -67,7 +78,7 @@ m.use(function (next) {
     }, 1000);
 });
 
-m.use(function (next) {
+middleware.use(function (next) {
     setTimeout(function () {
 
         console.log("use - 2");
@@ -76,15 +87,15 @@ m.use(function (next) {
     }, 1000);
 });
 
-m.go(function () {
+middleware.start(function () {
     console.log("final call");
 });
 ```
 
 
-### Example (hooks)
+### Hooks
 ```js
-const {hooks} = require("kickstart");
+const kickstart = require("kickstart");
 
 const lib = {
     method: function (cb) {
@@ -94,30 +105,30 @@ const lib = {
 };
 
 
-const i = new hooks(lib, "method");
+const hook = new kickstart.Hooks(lib, "method");
 
-i.pre(function (next) {
-
-    console.log("pre");
-    next();
-
-});
-
-i.pre(function (next) {
+hook.pre(function (next) {
 
     console.log("pre");
     next();
 
 });
 
-i.post(function (next) {
+hook.pre(function (next) {
+
+    console.log("pre");
+    next();
+
+});
+
+hook.post(function (next) {
 
     console.log("post");
     next();
 
 });
 
-i.post(function (next) {
+hook.post(function (next) {
 
     console.log("post");
     next();
@@ -128,7 +139,5 @@ lib.method(function () {
     console.log("method in lib");
 });
 ```
-
-See ```examples``` for more documention.
 
 Licensed under: MIT

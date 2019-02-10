@@ -100,6 +100,7 @@ Events.prototype.emit = function emit() {
         // symbols should be better
         // serialize to much...
         // @TODO ACK identifiere
+        // process.hrtime()[1] ?
         data.ack = Date.now();
         this.on(data.ack, last);
 
