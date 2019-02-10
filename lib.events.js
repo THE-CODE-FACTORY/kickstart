@@ -87,6 +87,7 @@ Events.prototype.emit = function emit() {
     const args = Array.prototype.slice.call(arguments);
     const event = args.shift();
     const last = args.pop();
+    const self = this;
 
     var data = Object.assign({}, this._template, {
         args: args,
@@ -102,6 +103,8 @@ Events.prototype.emit = function emit() {
         data.ack = Date.now();
         this.on(data.ack, last);
 
+        console.log("last is function");
+
     } else {
 
         // last argument is no function
@@ -115,7 +118,19 @@ Events.prototype.emit = function emit() {
     // process local
     if (this._events[event]) {
         this._events[event].forEach((fnc) => {
+
+            if (data.ack) {
+                args.push(function () {
+
+                    const args = Array.prototype.slice.call(arguments);
+                    self.emit.apply(self, [data.ack].concat(args));
+
+                });
+            }
+
+            // invoke function
             fnc.apply(data, args);
+
         }, this);
     }
 
