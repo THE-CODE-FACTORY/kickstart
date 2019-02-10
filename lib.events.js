@@ -103,8 +103,6 @@ Events.prototype.emit = function emit() {
         data.ack = Date.now();
         this.on(data.ack, last);
 
-        console.log("last is function");
-
     } else {
 
         // last argument is no function

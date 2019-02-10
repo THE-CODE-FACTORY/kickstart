@@ -27,7 +27,7 @@ In each service `require()` our `lib.events.js` and you can simple pass events b
 ### Example (services)
 ##### index.js
 ```js
-const {services} = require("bootstrap");
+const {services} = require("kickstart");
 
 // where are the services located?
 services.folder = "./services";
@@ -41,7 +41,7 @@ services.startup("service-3.js");
 
 ##### services/service-(1-3).js
 ```js
-const {emitter} = require("bootstrap");
+const {emitter} = require("kickstart");
 
 emitter.on("event-1", function(){
     console.log("Event - 1, in process:%d", process.pid);
@@ -55,7 +55,7 @@ setTimeout(function(){
 
 ### Example (middleware)
 ```js
-const {middlware} = require("bootstrap");
+const {middlware} = require("kickstart");
 const m = new middleware();
 
 m.use(function (next) {
@@ -84,7 +84,7 @@ m.go(function () {
 
 ### Example (hooks)
 ```js
-const {hooks} = require("bootstrap");
+const {hooks} = require("kickstart");
 
 const lib = {
     method: function (cb) {
