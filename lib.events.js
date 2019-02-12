@@ -3,7 +3,7 @@
 // https://nodejs.org/dist/latest-v10.x/docs/api/events.html#events_emitter_removelistener_eventname_listener
 */
 
-function Events() {
+function Events(options) {
 
     var childs = [];
     const self = this;
@@ -16,6 +16,11 @@ function Events() {
         ack: null
     };
 
+    this.options = Object.assign({
+        ipcBroadcast: false,
+        namespace: ""
+    }, options);
+
 
     Object.defineProperty(this, "childs", {
         get: function () {
@@ -25,43 +30,45 @@ function Events() {
 
             childs = arr;
 
-            childs.forEach((child) => {
-                child.on("message", (data) => {
+            if (this.options.ipcBroadcast) {
+                childs.forEach((child) => {
+                    child.on("message", (data) => {
 
 
-                    // process local
-                    if (self._events[data.event]) {
-                        self._events[data.event].forEach((fnc) => {
+                        // process local
+                        if (self._events[data.event]) {
+                            self._events[data.event].forEach((fnc) => {
 
-                            if (data.ack) {
-                                data.args.push(function () {
+                                if (data.ack) {
+                                    data.args.push(function () {
 
-                                    const args = Array.prototype.slice.call(arguments);
-                                    self.emit.apply(self, [data.ack].concat(args));
+                                        const args = Array.prototype.slice.call(arguments);
+                                        self.emit.apply(self, [data.ack].concat(args));
 
-                                });
-                            }
+                                    });
+                                }
 
-                            // call event listener
-                            fnc.apply(data, data.args);
+                                // call event listener
+                                fnc.apply(data, data.args);
 
-                        }, self);
-                    }
-
-
-                    // "hub" role
-                    // broadcast to other childs
-                    childs.forEach((sub) => {
-                        if (sub.pid !== data.origin) {
-
-                            sub.send(data);
-
+                            }, self);
                         }
+
+
+                        // "hub" role
+                        // broadcast to other childs
+                        childs.forEach((sub) => {
+                            if (sub.pid !== data.origin) {
+
+                                sub.send(data);
+
+                            }
+                        });
+
+
                     });
-
-
                 });
-            });
+            }
 
         }
     });
@@ -70,7 +77,7 @@ function Events() {
     // we are: child
     // wait for messages from master
     process.on("message", (data) => {
-        if (self._events[data.event]) {
+        if (self._events[data.event] && this.options.ipcBroadcast) {
 
             self._events[data.event].forEach((fnc) => {
                 fnc.apply(data, data.args);
@@ -91,7 +98,7 @@ Events.prototype.emit = function emit() {
 
     var data = Object.assign({}, this._template, {
         args: args,
-        event: event
+        event: this.options.namespace + event
     });
 
 
@@ -101,7 +108,7 @@ Events.prototype.emit = function emit() {
         // serialize to much...
         // @TODO ACK identifiere
         // process.hrtime()[1] ?
-        data.ack = Date.now();
+        data.ack = Date.now() * Math.random();
         this.on(data.ack, last);
 
     } else {
@@ -136,14 +143,16 @@ Events.prototype.emit = function emit() {
 
     // we are: master
     // send to child processes
-    this.childs.forEach((child) => {
-        child.send(data)
-    }, this);
+    if (this.options.ipcBroadcast) {
+        this.childs.forEach((child) => {
+            child.send(data)
+        }, this);
+    }
 
 
     // we are: child
     // send to master (hub)
-    if (process.send) {
+    if (process.send && this.options.ipcBroadcast) {
         process.send(data);
     }
 
@@ -153,11 +162,11 @@ Events.prototype.emit = function emit() {
 
 Events.prototype.on = function on(event, cb) {
 
-    if (!this._events[event]) {
-        this._events[event] = [];
+    if (!this._events[this.options.namespace + event]) {
+        this._events[this.options.namespace + event] = [];
     }
 
-    this._events[event].push(cb);
+    this._events[this.options.namespace + event].push(cb);
 
 };
 
@@ -165,24 +174,24 @@ Events.prototype.on = function on(event, cb) {
 Events.prototype.once = function once(event, cb) {
 
 
-    if (!this._events[event]) {
-        this._events[event] = [];
+    if (!this._events[this.options.namespace + event]) {
+        this._events[this.options.namespace + event] = [];
     }
 
     const self = this;
     const wrapper = function wrapper() {
 
         const args = Array.prototype.slice.call(arguments);
-        const index = self._events[event].indexOf(wrapper);
+        const index = self._events[this.options.namespace + event].indexOf(wrapper);
 
         // remove after wrapper gets called
-        self._events[event].splice(index, 1);
+        self._events[this.options.namespace + event].splice(index, 1);
         cb.apply(this, args);
 
     };
 
     // add event listener
-    this._events[event].push(wrapper);
+    this._events[this.options.namespace + event].push(wrapper);
 
 };
 
