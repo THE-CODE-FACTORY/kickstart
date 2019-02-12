@@ -197,17 +197,17 @@ Events.prototype.once = function once(event, cb) {
 
 
 Events.prototype.removeListener = function removeListener(event, cb) {
-    if (this._events[event]) {
+    if (this._events[this.options.namespace + event]) {
 
-        const index = this._events[event].indexOf(cb);
-        this._events[event].splice(index, 1);
+        const index = this._events[this.options.namespace + event].indexOf(cb);
+        this._events[this.options.namespace + event].splice(index, 1);
 
     }
 };
 
 
 Events.prototype.removeAllListeners = function removeAllListeners(event) {
-    this._events[event] = [];
+    this._events[this.options.namespace + event] = [];
 };
 
 
